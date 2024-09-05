@@ -36,6 +36,7 @@ namespace QLNet
    {
       private GeneralizedBlackScholesProcess process_;
       private int timeSteps_;
+      private BlackScholesLattice<T> lattice_;
 
       public BinomialVanillaEngine(GeneralizedBlackScholesProcess process, int timeSteps)
       {
@@ -80,11 +81,12 @@ namespace QLNet
 
          T tree = FastActivator<T>.Create().factory(bs, maturity, timeSteps_, payoff.strike());
 
-         BlackScholesLattice<T> lattice = new BlackScholesLattice<T>(tree, r, maturity, timeSteps_);
+         // BlackScholesLattice<T> lattice = new BlackScholesLattice<T>(tree, r, maturity, timeSteps_);
+         lattice_ = new BlackScholesLattice<T>(tree, r, maturity, timeSteps_);
 
          DiscretizedVanillaOption option = new DiscretizedVanillaOption(arguments_, process_, grid);
 
-         option.initialize(lattice, maturity);
+         option.initialize(lattice_, maturity);
 
          // Partial derivatives calculated from various points in the
          // binomial tree (Odegaard)
@@ -95,7 +97,7 @@ namespace QLNet
          Vector va2 = new Vector(option.values());
          Utils.QL_REQUIRE(va2.size() == 3, () => "Expect 3 nodes in grid at second step");
          double p2h = va2[2]; // high-price
-         double s2 = lattice.underlying(2, 2); // high price
+         double s2 = lattice_.underlying(2, 2); // high price
 
          // Rollback to second-last step, and get option value (p1) at
          // this point
@@ -107,7 +109,7 @@ namespace QLNet
          // Finally, rollback to t=0
          option.rollback(0.0);
          double p0 = option.presentValue();
-         double s1 = lattice.underlying(1, 1);
+         double s1 = lattice_.underlying(1, 1);
 
          // Calculate partial derivatives
          double delta0 = (p1 - p0) / (s1 - s0);   // dp/ds
@@ -122,5 +124,10 @@ namespace QLNet
                                                   results_.delta.GetValueOrDefault(),
                                                   results_.gamma.GetValueOrDefault());
       }
+      public BlackScholesLattice<T> GetLattice()
+      {
+         return lattice_;
+      }
+
    }
 }
